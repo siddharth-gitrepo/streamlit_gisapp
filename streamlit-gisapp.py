@@ -2,7 +2,7 @@
 import streamlit as st
 import pandas as pd
 
-st.set_page_config(page_title="GIS App", layout="wide")
+st.set_page_config(page_title="Pedestrian Movement and Crashes GIS App", layout="wide")
 
 # ---------- Top bar ----------
 st.markdown(
@@ -68,3 +68,4 @@ st.map(map_df, zoom=4, use_container_width=True)
 # Optional success message after clicking Run
 if run:
     st.success(f"Analysis Triggered for → {city} | {poi_type} | {grid_size} | {output_type}")
+
