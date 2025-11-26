@@ -21,9 +21,10 @@ WORKSHEET_MAP = {
 METRIC_COL_MAP = {
     "Exposure": "exposure",
     "Volume": "predicted_total_trips",  # or "log_max_volume" if you prefer
-    "Crash": "sum",                     # change when you have a real crash col
+    "Accessibility Index": "sum",       # change when you have a real crash col
+    "Population": "pop_sum",
+    "Crash": ""
 }
-
 
 def _parse_wkt_point(series: pd.Series) -> tuple[pd.Series, pd.Series]:
     """Parse 'POINT (lon lat)' WKT strings into lon/lat series."""
@@ -137,3 +138,4 @@ def fetch_data(city: str, poi_type: str, grid_size: str, output_type: str) -> pd
         df["metric"] = None
 
     return df
+
