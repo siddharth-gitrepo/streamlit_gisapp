@@ -4,8 +4,8 @@ import pandas as pd
 import streamlit as st
 from streamlit_gsheets import GSheetsConnection
 
-# Your spreadsheet id
-SHEET_ID = "1NSxmfeRUD-bkjIC8Bl_4JJMZaJExRJ2x_DX1NDOvqgc"
+# We now read the spreadsheet URL/name from .streamlit/secrets.toml
+# under [connections.gsheets], so no need to keep SHEET_ID here.
 
 # Map (city, grid_size, poi_type) -> worksheet/tab name
 # 👉 Extend this as you add more city/grid/poi combos
@@ -53,7 +53,7 @@ def _parse_wkt_polygon(s: str):
     if not txt:
         return []
 
-    # Remove leading POLYGON, surround parens
+    # Remove leading POLYGON, surrounding parens
     txt = txt.replace("POLYGON", "").strip()
     # remove outer parens
     txt = txt.lstrip("(").rstrip(")")
@@ -88,10 +88,11 @@ def fetch_data(city: str, poi_type: str, grid_size: str, output_type: str) -> pd
         )
         return pd.DataFrame()
 
+    # Uses the connection configured in .streamlit/secrets.toml
     conn: GSheetsConnection = st.connection("gsheets", type=GSheetsConnection)
 
+    # spreadsheet parameter is taken from secrets, so we only pass worksheet
     df = conn.read(
-        spreadsheet=SHEET_ID,
         worksheet=worksheet,
         ttl="10m",
     )
@@ -136,4 +137,3 @@ def fetch_data(city: str, poi_type: str, grid_size: str, output_type: str) -> pd
         df["metric"] = None
 
     return df
-
