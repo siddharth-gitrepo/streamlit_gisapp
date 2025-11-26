@@ -4,7 +4,7 @@ import pandas as pd
 import pydeck as pdk
 from google_sheets_client import fetch_data
 
-st.set_page_config(page_title="GIS App", layout="wide")
+st.set_page_config(page_title="Pedestrian GIS App", layout="wide")
 
 st.markdown("""
 <div style="background-color:#111;padding:12px 24px;color:white;font-size:22px;font-weight:600;border-radius:4px;">
@@ -167,3 +167,4 @@ if run:
 
 else:
     show_default_map()
+
