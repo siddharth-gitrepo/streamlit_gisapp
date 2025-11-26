@@ -1,58 +1,138 @@
 # google_sheets_client.py
-import gspread
+
 import pandas as pd
-from google.oauth2.service_account import Credentials
-import streamlit as st
 import streamlit as st
 from streamlit_gsheets import GSheetsConnection
 
-SCOPES = ["https://www.googleapis.com/auth/spreadsheets.readonly"]
+# Your spreadsheet id
+SHEET_ID = "1NSxmfeRUD-bkjIC8Bl_4JJMZaJExRJ2x_DX1NDOvqgc"
 
-# TODO: put your actual Sheet ID here
-SHEET_ID = "1NSxmfeRUD-bkjIC8Bl_4JJMZaJExRJ2x_DX1NDOvqgc" # "1LFcyNm5F31PUb6XfoATsrJ68NojFPhpncq7Yt3Rm9Hc"
-SHEET_NAME = ["delhi_1km", "delhi_1km_2"] # "grid_exp_gdf"  # or "data" if you renamed it
+# Map (city, grid_size, poi_type) -> worksheet/tab name
+# 👉 Extend this as you add more city/grid/poi combos
+WORKSHEET_MAP = {
+    ("Delhi", "1km", "Google Pois"): "delhi_1km",
+    ("Delhi", "1km", "OSM Pois"): "delhi_1km_2",
+    # ("Delhi", "200m", "Google Pois"): "delhi_200m",
+    # ("Mumbai", "1km", "Google Pois"): "mumbai_1km",
+    # ...
+}
 
-# @st.cache_resource
-# def get_gsheet_client():
-#     creds = Credentials.from_service_account_file(
-#         "service_account.json",
-#         scopes=SCOPES,
-#     )
-#     client = gspread.authorize(creds)
-#     return client
+# Map output dropdown to column name in sheet
+METRIC_COL_MAP = {
+    "Exposure": "exposure",
+    "Volume": "predicted_total_trips",  # or "log_max_volume" if you prefer
+    "Crash": "sum",                     # change when you have a real crash col
+}
+
+
+def _parse_wkt_point(series: pd.Series) -> tuple[pd.Series, pd.Series]:
+    """Parse 'POINT (lon lat)' WKT strings into lon/lat series."""
+    coords = (
+        series.astype(str)
+        .str.replace("POINT", "", regex=False)
+        .str.strip(" ()")
+    )
+    lon_lat = coords.str.split(expand=True)
+    if lon_lat.shape[1] < 2:
+        return pd.Series(dtype="float64"), pd.Series(dtype="float64")
+
+    lon = pd.to_numeric(lon_lat[0], errors="coerce")
+    lat = pd.to_numeric(lon_lat[1], errors="coerce")
+    return lon, lat
+
+
+def _parse_wkt_polygon(s: str):
+    """
+    Parse 'POLYGON ((lon lat, lon lat, ...))' into list of (lon, lat) tuples.
+    Returns [] on failure.
+    """
+    if not isinstance(s, str):
+        return []
+
+    txt = s.strip()
+    if not txt:
+        return []
+
+    # Remove leading POLYGON, surround parens
+    txt = txt.replace("POLYGON", "").strip()
+    # remove outer parens
+    txt = txt.lstrip("(").rstrip(")")
+    # If still nested "(...)", strip again
+    if txt.startswith("(") and txt.endswith(")"):
+        txt = txt[1:-1]
+
+    coords = []
+    for pair in txt.split(","):
+        parts = pair.strip().split()
+        if len(parts) >= 2:
+            try:
+                lon = float(parts[0])
+                lat = float(parts[1])
+                coords.append((lon, lat))
+            except ValueError:
+                continue
+    return coords
+
 
 @st.cache_data
-def fetch_data(city, poi_type, grid_size, output_type):
-    # client = get_gsheet_client()
-    # sh = client.open_by_key(SHEET_ID)
-    # ws = sh.worksheet(SHEET_NAME)
+def fetch_data(city: str, poi_type: str, grid_size: str, output_type: str) -> pd.DataFrame:
+    """Fetch data for a given city/grid/poi/output combination, including polygon info."""
 
-    # # Read all rows (header row becomes columns)
-    # records = ws.get_all_records()
-    # df = pd.DataFrame(records)
+    key = (city, grid_size, poi_type)
+    worksheet = WORKSHEET_MAP.get(key)
 
-    
-    # Create a connection object.
-    conn = st.connection("gsheets", type=GSheetsConnection)
+    if worksheet is None:
+        st.error(
+            f"No worksheet configured for {city} – {grid_size} – {poi_type}. "
+            f"Add it to WORKSHEET_MAP in google_sheets_client.py."
+        )
+        return pd.DataFrame()
 
-    worksheet = ""
-    if city == "Delhi" & grid_size == "1 km":
-        worksheet = SHEET_NAME[0]
-    else:
-        worksheet = SHEET_NAME[1]
-    
+    conn: GSheetsConnection = st.connection("gsheets", type=GSheetsConnection)
+
     df = conn.read(
+        spreadsheet=SHEET_ID,
         worksheet=worksheet,
         ttl="10m",
-        usecols=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
-        nrows=3,
     )
+
+    # Drop completely empty rows
+    df = df.dropna(how="all")
     if df.empty:
         return df
 
-    # Filter based on dropdown selections
-    mask = (
-        (df["output_type"] == output_type)
-    )
-    return df[mask].reset_index(drop=True)
+    # --- POINT GEOMETRY -> lon / lat for st.map ---
+    if "geometry" in df.columns:
+        lon, lat = _parse_wkt_point(df["geometry"])
+        df["lon"] = lon
+        df["lat"] = lat
 
+    # --- POLYGON -> list of (lon, lat) + simple centroid ---
+    if "polygon_points" in df.columns:
+        poly_coords = df["polygon_points"].astype(str).apply(_parse_wkt_polygon)
+        df["polygon_coords"] = poly_coords
+
+        # simple centroid = mean of polygon coordinates
+        def centroid(coords):
+            if not coords:
+                return (None, None)
+            xs = [c[0] for c in coords]
+            ys = [c[1] for c in coords]
+            return (sum(xs) / len(xs), sum(ys) / len(ys))
+
+        centroids = poly_coords.apply(centroid)
+        df["poly_lon_centroid"] = centroids.apply(lambda c: c[0])
+        df["poly_lat_centroid"] = centroids.apply(lambda c: c[1])
+
+    # --- metric column based on output_type ---
+    metric_col = METRIC_COL_MAP.get(output_type)
+    if metric_col and metric_col in df.columns:
+        df["metric"] = pd.to_numeric(df[metric_col], errors="coerce")
+    else:
+        st.warning(
+            f"Metric column for '{output_type}' not found. "
+            f"Check METRIC_COL_MAP or sheet columns."
+        )
+        df["metric"] = None
+
+    return df
