@@ -7,8 +7,8 @@ import streamlit as st
 SCOPES = ["https://www.googleapis.com/auth/spreadsheets.readonly"]
 
 # TODO: put your actual Sheet ID here
-SHEET_ID = "1LFcyNm5F31PUb6XfoATsrJ68NojFPhpncq7Yt3Rm9Hc"
-SHEET_NAME = "data"  # or "data" if you renamed it
+SHEET_ID = "1NSxmfeRUD-bkjIC8Bl_4JJMZaJExRJ2x_DX1NDOvqgc" # "1LFcyNm5F31PUb6XfoATsrJ68NojFPhpncq7Yt3Rm9Hc"
+SHEET_NAME = "grid_exp_gdf"  # or "data" if you renamed it
 
 @st.cache_resource
 def get_gsheet_client():
@@ -40,3 +40,4 @@ def fetch_data(city, poi_type, grid_size, output_type):
         (df["output_type"] == output_type)
     )
     return df[mask].reset_index(drop=True)
+
