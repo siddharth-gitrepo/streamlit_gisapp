@@ -23,7 +23,8 @@ METRIC_COL_MAP = {
     "Volume": "predicted_total_trips",  # or "log_max_volume" if you prefer
     "Accessibility Index": "sum",       # change when you have a real crash col
     "Population": "pop_sum",
-    "Crash": ""
+    "Crash": "",
+    "Crash Index": ""
 }
 
 def _parse_wkt_point(series: pd.Series) -> tuple[pd.Series, pd.Series]:
@@ -138,4 +139,5 @@ def fetch_data(city: str, poi_type: str, grid_size: str, output_type: str) -> pd
         df["metric"] = None
 
     return df
+
 
