@@ -8,7 +8,7 @@ st.set_page_config(page_title="Pedestrian GIS App", layout="wide")
 
 st.markdown("""
 <div style="background-color:#111;padding:12px 24px;color:white;font-size:22px;font-weight:600;border-radius:4px;">
-    Gis App
+    Pedestrian GIS App
 </div>
 """, unsafe_allow_html=True)
 
@@ -167,6 +167,7 @@ if run:
 
 else:
     show_default_map()
+
 
 
 
