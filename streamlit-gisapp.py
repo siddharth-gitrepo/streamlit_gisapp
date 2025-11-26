@@ -108,7 +108,7 @@ if run:
             view_state = pdk.ViewState(
                 latitude=center_lat,
                 longitude=center_lon,
-                zoom=11,
+                zoom=7,
                 pitch=0,
             )
 
@@ -167,6 +167,7 @@ if run:
 
 else:
     show_default_map()
+
 
 
 
