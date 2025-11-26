@@ -10,7 +10,7 @@ SCOPES = ["https://www.googleapis.com/auth/spreadsheets.readonly"]
 
 # TODO: put your actual Sheet ID here
 SHEET_ID = "1NSxmfeRUD-bkjIC8Bl_4JJMZaJExRJ2x_DX1NDOvqgc" # "1LFcyNm5F31PUb6XfoATsrJ68NojFPhpncq7Yt3Rm9Hc"
-SHEET_NAME = "delhi_1km" # "grid_exp_gdf"  # or "data" if you renamed it
+SHEET_NAME = ["delhi_1km", "delhi_1km_2"] # "grid_exp_gdf"  # or "data" if you renamed it
 
 # @st.cache_resource
 # def get_gsheet_client():
@@ -35,8 +35,14 @@ def fetch_data(city, poi_type, grid_size, output_type):
     # Create a connection object.
     conn = st.connection("gsheets", type=GSheetsConnection)
 
+    worksheet = ""
+    if city == "Delhi" & grid_size == "1 km":
+        worksheet = SHEET_NAME[0]
+    else:
+        worksheet = SHEET_NAME[1]
+    
     df = conn.read(
-        worksheet="grid_exp_gdf",
+        worksheet=worksheet,
         ttl="10m",
         usecols=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
         nrows=3,
@@ -46,12 +52,7 @@ def fetch_data(city, poi_type, grid_size, output_type):
 
     # Filter based on dropdown selections
     mask = (
-        (df["city"] == city) &
-        (df["poi_type"] == poi_type) &
-        (df["grid_size"] == grid_size) &
         (df["output_type"] == output_type)
     )
     return df[mask].reset_index(drop=True)
-
-
 
