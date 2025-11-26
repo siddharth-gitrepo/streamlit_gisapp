@@ -25,7 +25,7 @@ with st.container():
     with col3:
         grid_size = st.selectbox("Grid Size", ["200m", "400m", "800m", "1km", "1.2km", "1.5km", "2km"])
     with col4:
-        output_type = st.selectbox("Output", ["Exposure", "Volume", "Accessibility Index", "Population", "Crash Count", "Crash Index"])
+        output_type = st.selectbox("Output", ["Exposure", "Volume", "Accessibility Index", "Population", "Crash", "Crash Index"])
     with col5:
         st.write(" ")
         st.write(" ")
@@ -167,6 +167,7 @@ if run:
 
 else:
     show_default_map()
+
 
 
 
