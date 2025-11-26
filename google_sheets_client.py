@@ -136,3 +136,4 @@ def fetch_data(city: str, poi_type: str, grid_size: str, output_type: str) -> pd
         df["metric"] = None
 
     return df
+
